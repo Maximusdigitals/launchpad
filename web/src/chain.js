@@ -1,5 +1,5 @@
 import { createPublicClient, createWalletClient, custom, http, defineChain, formatEther } from 'viem';
-import { NET } from './config.js';
+import { NET, PREVIEW } from './config.js';
 
 export const chain = defineChain({
   id: NET.id,
@@ -116,6 +116,7 @@ export async function write(req) {
   return { hash, receipt };
 }
 
-export const txUrl = (h) => (NET.explorer ? `${NET.explorer}/tx/${h}` : '');
-export const addrUrl = (a) => (NET.explorer ? `${NET.explorer}/address/${a}` : '');
+export const txUrl = (h) => (NET.explorer && !PREVIEW ? `${NET.explorer}/tx/${h}` : '');
+// preview data comes from a local chain, so explorer links would point nowhere
+export const addrUrl = (a) => (NET.explorer && !PREVIEW ? `${NET.explorer}/address/${a}` : location.hash || '#/');
 export { formatEther };
