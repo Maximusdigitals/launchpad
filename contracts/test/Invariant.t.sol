@@ -101,6 +101,12 @@ contract InvariantTest is Base {
         assertLe(c.totalClaimed(), c.totalForfeited());
     }
 
+    function invariant_weightsConsistent() public view {
+        uint256 sum;
+        for (uint256 i; i < actors.length; i++) sum += c.weightOf(actors[i]);
+        assertEq(sum, c.totalWeight());
+    }
+
     function invariant_devNeverHasRewards() public view {
         assertEq(c.pendingRewards(dev), 0);
     }

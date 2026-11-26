@@ -268,6 +268,21 @@ contract LaunchCoinTest is Base {
         assertLt(hsA, hsC);
     }
 
+    function test_self_transfer_cannot_inflate_weight() public {
+        LaunchCoin c = launch(params(), 0);
+        buy(c, alice, 0.002 ether);
+        buy(c, bob, 0.002 ether);
+        skip(L);
+        uint256 w0 = c.totalWeight();
+        uint256 a0 = c.weightOf(alice);
+        uint256 bal = c.balanceOf(alice);
+        vm.startPrank(alice);
+        for (uint256 i; i < 5; i++) c.transfer(alice, bal / 2);
+        vm.stopPrank();
+        assertEq(c.totalWeight(), w0);
+        assertEq(c.weightOf(alice), a0);
+    }
+
     function test_cannot_send_tokens_to_coin_contract() public {
         LaunchCoin c = launch(params(), 0);
         buy(c, alice, 0.002 ether);

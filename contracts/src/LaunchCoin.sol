@@ -61,6 +61,7 @@ contract LaunchCoin is ERC20, ReentrancyGuard {
     address public immutable weth;
     address public immutable pair;
     uint64 public immutable launchTime;
+    uint64 public immutable launchBlock; // lets indexers start their log scan here
     uint64 public immutable lockDuration;
     uint16 public immutable penaltyBps;
     uint8 public immutable steepness;
@@ -112,7 +113,8 @@ contract LaunchCoin is ERC20, ReentrancyGuard {
         uint256 forfeited, // sell: what went to the reward stream
         uint256 vEthAfter,
         uint256 vTokAfter,
-        uint64 lockEnd
+        uint64 lockEnd,
+        uint64 timestamp
     );
     event RewardsClaimed(address indexed holder, uint256 amount);
     event CurveCompleted(uint256 realEth, uint64 graduatesAt);
@@ -150,6 +152,7 @@ contract LaunchCoin is ERC20, ReentrancyGuard {
         creator = creator_;
         weth = weth_;
         launchTime = uint64(block.timestamp);
+        launchBlock = uint64(block.number);
         lockDuration = p.lockDuration;
         penaltyBps = p.penaltyBps;
         steepness = p.steepness;
@@ -213,7 +216,7 @@ contract LaunchCoin is ERC20, ReentrancyGuard {
             emit CurveCompleted(realEth, maxLockEnd);
         }
 
-        emit Trade(buyer, true, used, out, 0, 0, vEth, vTok, h.lockEnd);
+        emit Trade(buyer, true, used, out, 0, 0, vEth, vTok, h.lockEnd, uint64(block.timestamp));
 
         if (ethIn > used) _send(buyer, ethIn - used);
     }
@@ -245,7 +248,7 @@ contract LaunchCoin is ERC20, ReentrancyGuard {
 
         if (forfeit > 0) _addForfeit(forfeit);
 
-        emit Trade(msg.sender, false, value, amount, toSeller, forfeit, vEth, vTok, h.lockEnd);
+        emit Trade(msg.sender, false, value, amount, toSeller, forfeit, vEth, vTok, h.lockEnd, uint64(block.timestamp));
         if (toSeller > 0) _send(msg.sender, toSeller);
     }
 
@@ -386,6 +389,12 @@ contract LaunchCoin is ERC20, ReentrancyGuard {
                 if (from != address(0) && block.timestamp < holders[from].lockEnd) revert TransferLocked();
                 if (to == pair && pair != address(0)) revert PoolNotLive();
             }
+        }
+
+        if (from == to) {
+            // self-transfer: balances don't change, so neither may reward weights or clocks
+            super._update(from, to, value);
+            return;
         }
 
         _release();
